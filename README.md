@@ -1,4 +1,4 @@
-# VINS-Fusion Adapatation for COVINS-G
+# VINS-Fusion Adaptation for COVINS-G
 
 This repository contains an adapted version of the [VINS-fusion](https://github.com/HKUST-Aerial-Robotics/VINS-Fusion) which is adapted to be used with the [COVINS-G](https://github.com/VIS4ROB-lab/covins) (ICRA-23) architecture. Please refer to the [COVINS-G](https://github.com/VIS4ROB-lab/covins) repository for more details on how to use this specific frontend with the collaborative SLAM backend. If you use this version in your academic work, please cite: 
 
