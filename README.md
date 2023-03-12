@@ -2,14 +2,13 @@
 
 This repository contains an adapted version of the [VINS-fusion](https://github.com/HKUST-Aerial-Robotics/VINS-Fusion) which is adapted to be used with the [COVINS-G](https://github.com/VIS4ROB-lab/covins) (ICRA-23) architecture. Please refer to the [COVINS-G](https://github.com/VIS4ROB-lab/covins) repository for more details on how to use this specific frontend with the collaborative SLAM backend. If you use this version in your academic work, please cite: 
 
-    @misc{https://doi.org/10.48550/arxiv.2301.07147,
+    @article{patel23COVINS_G,
+        title = {COVINS-G: A Generic Back-end for Collaborative Visual-Inertial SLAM},
         doi = {10.48550/ARXIV.2301.07147},
         url = {https://arxiv.org/abs/2301.07147},
         author = {Patel, Manthan and Karrer, Marco and Bänninger, Philipp and Chli, Margarita},
-        title = {COVINS-G: A Generic Back-end for Collaborative Visual-Inertial SLAM},
         publisher = {arXiv},
         year = {2023},
-        copyright = {arXiv.org perpetual, non-exclusive license}
 }
 
 ## Installation
