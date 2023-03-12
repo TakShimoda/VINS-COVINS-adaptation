@@ -33,5 +33,10 @@ extern int ROW;
 extern int COL;
 extern std::string VINS_RESULT_PATH;
 extern int DEBUG_IMAGE;
+extern int NUM_FEAT;
+extern float SCALE_FACTOR;
+extern int NUM_PYRAMIDS;
+extern int THRES_INIT;
+extern int THRES_MIN;
 
 

@@ -1,0 +1,15 @@
+<launch>
+<arg name="ag_n" default="0" />
+<arg name="config" default="/root/catkin_ws/src/VINS-Fusion/config/d455/vins_fusion_realsense_d455.yaml" />
+
+<group ns="agent_$(arg ag_n)">
+    <node pkg="vins" type="vins_node" name="vins_node" args="$(arg config)" output="screen">
+        <remap from="/realsense/infra1/image_rect_raw" to="/realsense/infra1/image_rect_raw$(arg ag_n)"/>
+        <remap from="/realsense/infra2/image_rect_raw" to="/realsense/infra2/image_rect_raw$(arg ag_n)"/>
+        <remap from="/realsense/imu" to="/realsense/imu$(arg ag_n)"/>
+        <remap from="/agent_$(arg ag_n)/vins_node/camera_pose" to="/agent_$(arg ag_n)/cam_odom"/>
+    </node>
+</group>
+
+</launch>
+

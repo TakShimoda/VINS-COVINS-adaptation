@@ -1,8 +1,8 @@
 /*******************************************************
  * Copyright (C) 2019, Aerial Robotics Group, Hong Kong University of Science and Technology
- * 
+ *
  * This file is part of VINS.
- * 
+ *
  * Licensed under the GNU General Public License v3.0;
  * you may not use this file except in compliance with the License.
  *
@@ -10,6 +10,13 @@
  *******************************************************/
 
 #include "keyframe.h"
+
+#include <boost/dynamic_bitset.hpp>
+
+#include "ORBextractor.h"
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/eigen.hpp>
 
 template <typename Derived>
 static void reduceVector(vector<Derived> &v, vector<uchar> status)
@@ -24,7 +31,14 @@ static void reduceVector(vector<Derived> &v, vector<uchar> status)
 // create keyframe online
 KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, cv::Mat &_image,
 		           vector<cv::Point3f> &_point_3d, vector<cv::Point2f> &_point_2d_uv, vector<cv::Point2f> &_point_2d_norm,
-		           vector<double> &_point_id, int _sequence)
+                   vector<double> &_point_id, int _sequence
+                   // COVINS integration
+                   , vins_msgs::preintegration_msg::ConstPtr imu_msg_ptr
+                   // ------------------
+                   )
+// COVINS integration
+    : imu_msg(*imu_msg_ptr)
+// ------------------
 {
 	time_stamp = _time_stamp;
 	index = _index;
@@ -32,7 +46,7 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3
 	vio_R_w_i = _vio_R_w_i;
 	T_w_i = vio_T_w_i;
 	R_w_i = vio_R_w_i;
-	origin_vio_T = vio_T_w_i;		
+	origin_vio_T = vio_T_w_i;
 	origin_vio_R = vio_R_w_i;
 	image = _image.clone();
 	cv::resize(image, thumbnail, cv::Size(80, 60));
@@ -47,14 +61,14 @@ KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3
 	sequence = _sequence;
 	computeWindowBRIEFPoint();
 	computeBRIEFPoint();
-	if(!DEBUG_IMAGE)
-		image.release();
+//	if(!DEBUG_IMAGE)
+//		image.release();
 }
 
 // load previous keyframe
 KeyFrame::KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, Vector3d &_T_w_i, Matrix3d &_R_w_i,
-					cv::Mat &_image, int _loop_index, Eigen::Matrix<double, 8, 1 > &_loop_info,
-					vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors)
+                   cv::Mat &_image, int _loop_index, Eigen::Matrix<double, 8, 1 > &_loop_info,
+                   vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors)
 {
 	time_stamp = _time_stamp;
 	index = _index;
@@ -233,14 +247,14 @@ void KeyFrame::PnPRANSAC(const vector<cv::Point2f> &matched_2d_old_norm,
     cv::Mat inliers;
     TicToc t_pnp_ransac;
 
-    if (CV_MAJOR_VERSION < 3)
+    if (CV_MAJOR_VERSION < 3) {
         solvePnPRansac(matched_3d, matched_2d_old_norm, K, D, rvec, t, true, 100, 10.0 / 460.0, 100, inliers);
-    else
-    {
-        if (CV_MINOR_VERSION < 2)
+    } else {
+        if (CV_MINOR_VERSION < 2) {
             solvePnPRansac(matched_3d, matched_2d_old_norm, K, D, rvec, t, true, 100, sqrt(10.0 / 460.0), 0.99, inliers);
-        else
+        } else {
             solvePnPRansac(matched_3d, matched_2d_old_norm, K, D, rvec, t, true, 100, 10.0 / 460.0, 0.99, inliers);
+        }
 
     }
 
@@ -284,7 +298,7 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 
 	TicToc t_match;
 	#if 0
-		if (DEBUG_IMAGE)    
+		if (DEBUG_IMAGE)
 	    {
 	        cv::Mat gray_img, loop_match_img;
 	        cv::Mat old_img = old_kf->image;
@@ -318,7 +332,7 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	reduceVector(matched_id, status);
 	//printf("search by des finish\n");
 
-	#if 0 
+	#if 0
 		if (DEBUG_IMAGE)
 	    {
 			int gap = 10;
@@ -359,9 +373,9 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	        path2 <<  "/home/tony-ws1/raw_data/loop_image/"
 	                << index << "-"
 	                << old_kf->index << "-" << "1descriptor_match_2.jpg";
-	        cv::imwrite( path2.str().c_str(), old_img);	        
+	        cv::imwrite( path2.str().c_str(), old_img);
 	        */
-	        
+
 	    }
 	#endif
 	status.clear();
@@ -467,8 +481,8 @@ bool KeyFrame::findConnection(KeyFrame* old_kf)
 	            if ((int)matched_2d_cur.size() > MIN_LOOP_NUM)
 	            {
 	            	/*
-	            	cv::imshow("loop connection",loop_match_img);  
-	            	cv::waitKey(10);  
+	            	cv::imshow("loop connection",loop_match_img);
+	            	cv::waitKey(10);
 	            	*/
 	            	cv::Mat thumbimage;
 	            	cv::resize(loop_match_img, thumbimage, cv::Size(loop_match_img.cols / 2, loop_match_img.rows / 2));
@@ -584,3 +598,263 @@ BriefExtractor::BriefExtractor(const std::string &pattern_file)
 }
 
 
+// COVINS integration
+void KeyFrame::ConvertToMsg(covins::MsgKeyframe &msg, KeyFrame *kf_ref, int client_id, bool is_update) {
+
+    int num_feat = NUM_FEAT;
+    float scale_factor = SCALE_FACTOR;
+    int num_pyramids = NUM_PYRAMIDS;
+    int thres_init = THRES_INIT;
+    int thres_min = THRES_MIN;
+    
+    msg.is_update_msg = is_update;
+
+    msg.id.first = this->index;
+    msg.id.second = client_id;
+    msg.timestamp = this->time_stamp;
+
+    // Calibration - Cam
+    covins::TypeDefs::TransformType T_sc = covins::TypeDefs::TransformType::Identity();
+    T_sc.block<3,3>(0,0) = qic;
+    T_sc.block<3,1>(0,3) = tic;
+
+
+    msg.calibration.T_SC = T_sc;
+    msg.calibration.cam_model = covins::eCamModel::PINHOLE;
+    msg.calibration.dist_model = covins::eDistortionModel::RADTAN;
+
+    std::vector<covins::TypeDefs::precision_t> cam_params;
+    m_camera->writeParameters(cam_params); //EuRoC: k1 k2 p1 p2 fx fy cx cy
+
+    covins::TypeDefs::precision_t fx = cam_params[4];
+    covins::TypeDefs::precision_t fy = cam_params[5];
+    covins::TypeDefs::precision_t cx = cam_params[6];
+    covins::TypeDefs::precision_t cy = cam_params[7];
+    covins::TypeDefs::precision_t k1 = cam_params[0];
+    covins::TypeDefs::precision_t k2 = cam_params[1];
+    covins::TypeDefs::precision_t p1 = cam_params[2];
+    covins::TypeDefs::precision_t p2 = cam_params[3];
+    covins::TypeDefs::DynamicVectorType dist_coeffs;
+    dist_coeffs.resize(4);
+    dist_coeffs << k1,k2,p1,p2;
+
+    covins::VICalibration calib(T_sc,covins::eCamModel::PINHOLE,covins::eDistortionModel::RADTAN,
+                                        dist_coeffs,
+                                        m_camera->imageWidth(),m_camera->imageHeight(),
+                                        fx,fy,cx,cy,
+                                        0.0,0.0,
+                                        imu_msg.sigma_ac,imu_msg.sigma_gc,
+                                        0.0,0.0,
+                                        imu_msg.sigma_awc,imu_msg.sigma_gwc,
+                                        0.0,
+                                        imu_msg.g,
+                                        Vector3d::Zero(),
+                                        0,
+                                        imu_msg.td,
+                                        0.0
+                                        );
+    msg.calibration = calib;
+
+    msg.img_dim_x_min = 0.0;
+    msg.img_dim_y_min = 0.0;
+    msg.img_dim_x_max = COL;
+    msg.img_dim_y_max = ROW;
+
+    msg.keypoints_aors.reserve(point_3d.size());
+    msg.keypoints_distorted.reserve(point_3d.size());
+    msg.keypoints_undistorted.reserve(point_3d.size());
+    msg.descriptors.reserve(point_3d.size());
+
+    msg.keypoints_aors_add.reserve(num_feat);
+    msg.keypoints_distorted_add.reserve(num_feat);
+    msg.keypoints_undistorted_add.reserve(num_feat);
+    msg.descriptors_add.reserve(num_feat);
+
+    
+    for(size_t i=0;i<window_keypoints.size();++i) {
+        covins::TypeDefs::AorsType aors; //Angle,Octave,Response,Size
+        aors << window_keypoints[i].angle, static_cast<float>(window_keypoints[i].octave), window_keypoints[i].response, window_keypoints[i].size;
+
+        covins::TypeDefs::KeypointType kp_eigen;
+        kp_eigen[0] = static_cast<float>(window_keypoints[i].pt.x);
+        kp_eigen[1] = static_cast<float>(window_keypoints[i].pt.y);
+
+        msg.keypoints_aors.push_back(aors);
+        msg.keypoints_distorted.push_back(kp_eigen);
+        msg.keypoints_undistorted.push_back(kp_eigen);
+
+        // std::vector<boost::dynamic_bitset<>::block_type> v(window_brief_descriptors[i].num_blocks());
+        // boost::to_block_range(window_brief_descriptors[i], v.begin());
+
+        // cv::Mat desc(1,32,CV_8U, reinterpret_cast<uchar*>(&v[0]), v.size() * sizeof(boost::dynamic_bitset<>::block_type));
+
+        // msg.descriptors.push_back(desc);
+    }
+
+    // NOTE: Here we try to re-extract the descriptors for the window_keypoints.
+    // Since these keypoints are FAST corners (gravity aligned), the value of
+    // AORS is not set and thus has value -1 0 0 0. Extracting the ORB features
+    // with this AORS is not ideal and might not be sufficient for the Place
+    // Recognition nor the Image matching. Here, we will thus ignore these keypoints
+    // in the backend and only use the additional features (Extracted after line
+    // 730) for both Place Recognition and Feature Matching.
+
+    std::shared_ptr<covins::ORBextractor> extractor;
+    cv::Mat re_descriptors;
+    extractor.reset(new covins::ORBextractor(num_feat, scale_factor, num_pyramids, thres_init, thres_min));
+    extractor->Compute(image, window_keypoints, re_descriptors);
+    msg.descriptors = re_descriptors.clone();
+
+    if (msg.keypoints_distorted.empty()) {
+      // Extract Features to avoid the Backend failure
+
+    std::vector<cv::KeyPoint> cv_keypoints;
+    cv_keypoints.reserve(num_feat);
+	cv::Mat new_descriptors;
+    extractor.reset(new covins::ORBextractor(num_feat, scale_factor, num_pyramids, thres_init, thres_min));
+    (*extractor)(image, cv::Mat(), cv_keypoints, new_descriptors);
+
+    for(size_t i=0;i<cv_keypoints.size();++i) {
+        covins::TypeDefs::AorsType aors; //Angle,Octave,Response,Size
+        aors << cv_keypoints[i].angle, static_cast<float>(cv_keypoints[i].octave), cv_keypoints[i].response, cv_keypoints[i].size;
+
+        covins::TypeDefs::KeypointType kp_eigen;
+        kp_eigen[0] = static_cast<float>(cv_keypoints[i].pt.x);
+        kp_eigen[1] = static_cast<float>(cv_keypoints[i].pt.y);
+
+        msg.keypoints_aors.push_back(aors);
+        msg.keypoints_distorted.push_back(kp_eigen);
+    }
+    msg.descriptors = new_descriptors.clone();
+
+    }
+
+	std::vector<cv::KeyPoint> cv_keypoints_add;
+    cv_keypoints_add.reserve(num_feat);
+	cv::Mat new_descriptors_add;
+    extractor.reset(new covins::ORBextractor(num_feat, scale_factor, num_pyramids, thres_init, thres_min));
+    (*extractor)(image, cv::Mat(), cv_keypoints_add, new_descriptors_add);
+
+    for(size_t i=0;i<cv_keypoints_add.size();++i) {
+        covins::TypeDefs::AorsType aors; //Angle,Octave,Response,Size
+        
+        aors << cv_keypoints_add[i].angle, static_cast<float>(cv_keypoints_add[i].octave), cv_keypoints_add[i].response, cv_keypoints_add[i].size;
+
+        covins::TypeDefs::KeypointType kp_eigen;
+        kp_eigen[0] = static_cast<float>(cv_keypoints_add[i].pt.x);
+        kp_eigen[1] = static_cast<float>(cv_keypoints_add[i].pt.y);
+
+        msg.keypoints_aors_add.push_back(aors);
+        msg.keypoints_distorted_add.push_back(kp_eigen);
+
+    }
+
+	msg.descriptors_add = new_descriptors_add.clone();
+
+    msg.T_s_c = T_sc;
+    msg.lin_acc = covins::TypeDefs::Vector3Type::Zero();
+    msg.ang_vel = covins::TypeDefs::Vector3Type::Zero();
+
+    msg.velocity(0) = imu_msg.vs[0];
+    msg.velocity(1) = imu_msg.vs[1];
+    msg.velocity(2) = imu_msg.vs[2];
+    msg.bias_accel(0) = imu_msg.bas[0];
+    msg.bias_accel(1) = imu_msg.bas[1];
+    msg.bias_accel(2) = imu_msg.bas[2];
+    msg.bias_gyro(0) = imu_msg.bgs[0];
+    msg.bias_gyro(1) = imu_msg.bgs[1];
+    msg.bias_gyro(2) = imu_msg.bgs[2];
+
+    msg.lin_acc_init(0) = imu_msg.acc0[0];
+    msg.lin_acc_init(1) = imu_msg.acc0[1];
+    msg.lin_acc_init(2) = imu_msg.acc0[2];
+    msg.ang_vel_init(0) = imu_msg.gyr0[0];
+    msg.ang_vel_init(1) = imu_msg.gyr0[1];
+    msg.ang_vel_init(2) = imu_msg.gyr0[2];
+
+    int n_msgs = imu_msg.dt.size();
+//    std::cout << "KF has " << n_msgs << " imu measurements" << std::endl;
+    msg.preintegration.dt.resize(n_msgs);
+    msg.preintegration.lin_acc_x.resize(n_msgs);
+    msg.preintegration.lin_acc_y.resize(n_msgs);
+    msg.preintegration.lin_acc_z.resize(n_msgs);
+    msg.preintegration.ang_vel_x.resize(n_msgs);
+    msg.preintegration.ang_vel_y.resize(n_msgs);
+    msg.preintegration.ang_vel_z.resize(n_msgs);
+    for(int idx=0;idx<n_msgs;++idx) {
+        msg.preintegration.dt[idx]          = imu_msg.dt[idx];
+        msg.preintegration.lin_acc_x[idx]   = imu_msg.lin_acc[idx].x;
+        msg.preintegration.lin_acc_y[idx]   = imu_msg.lin_acc[idx].y;
+        msg.preintegration.lin_acc_z[idx]   = imu_msg.lin_acc[idx].z;
+        msg.preintegration.ang_vel_x[idx]   = imu_msg.ang_vel[idx].x;
+        msg.preintegration.ang_vel_y[idx]   = imu_msg.ang_vel[idx].y;
+        msg.preintegration.ang_vel_z[idx]   = imu_msg.ang_vel[idx].z;
+    }
+
+    covins::TypeDefs::TransformType T_w_sref = covins::TypeDefs::TransformType::Identity();
+    if(kf_ref) {
+        T_w_sref.block<3,3>(0,0) = kf_ref->R_w_i;
+        T_w_sref.block<3,1>(0,3) = kf_ref->T_w_i;
+    }
+
+    if(this->index == 0)
+        msg.id_predecessor = defpair;
+    else {
+        msg.id_predecessor.first = this->index-1;
+        msg.id_predecessor.second = client_id;
+    }
+    msg.id_successor = defpair;
+    if(kf_ref) {
+        msg.id_reference.first = kf_ref->index;
+        msg.id_reference.second = client_id;
+    }
+
+    covins::TypeDefs::TransformType  T_wi = covins::TypeDefs::TransformType::Identity();
+    T_wi.block<3,3>(0,0) = R_w_i;
+    T_wi.block<3,1>(0,3) = T_w_i;
+    msg.T_sref_s = T_w_sref.inverse() * T_wi;
+
+    // msg.points_3d.reserve(point_3d.size());
+    for (size_t indx = 0; indx < point_3d.size(); indx++) {
+        // msg.points_3d.push_back(Eigen::Vector3d(point_3d[indx].x, point_3d[indx].y, point_3d[indx].z));
+        if(!is_update) {
+            msg.landmarks.insert(std::make_pair(indx, std::make_pair((int)point_id[indx],client_id)));
+        }
+    }
+}
+
+void KeyFrame::ConvertToMsg(covins::MsgLandmark &msg, int landmark_idx, KeyFrame *kf_ref, int client_id, bool is_update) {
+    msg.is_update_msg = is_update;
+
+    msg.id.first = (int)point_id[landmark_idx];
+    msg.id.second = client_id;
+
+    if(!kf_ref) {
+        std::cout << "ERROR: " << "LM " << point_3d[landmark_idx] << ": no kf_ref given" << std::endl;
+        exit(-1);
+    }
+
+    msg.id_reference.first = kf_ref->index;
+    msg.id_reference.second = client_id;
+
+    covins::TypeDefs::TransformType T_w_sref = covins::TypeDefs::TransformType::Identity();
+    T_w_sref.block<3,3>(0,0) = kf_ref->R_w_i;
+    T_w_sref.block<3,1>(0,3) = kf_ref->T_w_i;
+    covins::TypeDefs::TransformType T_sref_w = T_w_sref.inverse();
+    covins::TypeDefs::Matrix3Type R_sref_w = T_sref_w.block<3,3>(0,0);
+    covins::TypeDefs::Vector3Type t_sref_w = T_sref_w.block<3,1>(0,3);
+    covins::TypeDefs::Vector3Type pos_w(point_3d[landmark_idx].x,point_3d[landmark_idx].y,point_3d[landmark_idx].z);
+    msg.pos_ref = R_sref_w * pos_w + t_sref_w;
+//    msg.pos_ref = pos_w;
+
+    if(!is_update){
+        msg.observations.insert(std::make_pair(make_pair(kf_ref->index,client_id),landmark_idx));
+    }
+}
+
+void KeyFrame::Geo2Eigen(geometry_msgs::Vector3 &vgeo, Vector3d &veigen) {
+    veigen(0) = vgeo.x;
+    veigen(1) = vgeo.y;
+    veigen(2) = vgeo.z;
+}
+// ------------------

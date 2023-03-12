@@ -1,0 +1,27 @@
+<launch>
+<arg name="ag_n" default="0" />
+<arg name="config" default="/root/catkin_ws/src/VINS-Fusion/config/euroc/euroc_mono_imu_config.yaml" />
+
+<group ns="agent_$(arg ag_n)">
+    <node pkg="loop_fusion" type="loop_fusion_node" name="loop_fusion_node" args="$(arg config)" output="screen">
+        <remap from="/vins_estimator/extrinsic" to="/agent_$(arg ag_n)/vins_node/extrinsic"/>
+        <remap from="/vins_estimator/keyframe_imu" to="/agent_$(arg ag_n)/vins_node/keyframe_imu"/>
+        <remap from="/vins_estimator/keyframe_point" to="/agent_$(arg ag_n)/vins_node/keyframe_point"/>
+        <remap from="/vins_estimator/keyframe_pose" to="/agent_$(arg ag_n)/vins_node/keyframe_pose"/>
+        <remap from="/vins_estimator/margin_cloud" to="/agent_$(arg ag_n)/vins_node/margin_cloud"/>
+        <remap from="/vins_estimator/odometry" to="/agent_$(arg ag_n)/vins_node/odometry"/>
+        <remap from="/cam0/image_raw" to="/cam0/image_raw$(arg ag_n)"/>
+        <remap from="/cam1/image_raw" to="/cam1/image_raw$(arg ag_n)"/>
+        <remap from="/imu0" to="/imu$(arg ag_n)"/>
+    </node>
+
+    <node pkg="vins" type="vins_node" name="vins_node" args="$(arg config)" output="screen">
+        <remap from="/cam0/image_raw" to="/cam0/image_raw$(arg ag_n)"/>
+        <remap from="/cam1/image_raw" to="/cam1/image_raw$(arg ag_n)"/>
+        <remap from="/imu0" to="/imu$(arg ag_n)"/>
+        <remap from="/agent_$(arg ag_n)/vins_node/camera_pose" to="/agent_$(arg ag_n)/cam_odom"/>
+    </node>
+</group>
+
+</launch>
+
