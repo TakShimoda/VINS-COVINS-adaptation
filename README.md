@@ -9,7 +9,7 @@ This repository contains an adapted version of the [VINS-fusion](https://github.
         author = {Patel, Manthan and Karrer, Marco and Bänninger, Philipp and Chli, Margarita},
         publisher = {arXiv},
         year = {2023},
-}
+    }
 
 ## Installation
 
