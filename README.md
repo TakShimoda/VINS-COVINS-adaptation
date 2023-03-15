@@ -28,7 +28,7 @@ git clone https://github.com/manthan99/VINS-COVINS-adaptation.git
 
 Build Docker:
 ```
-cd ~/catkin_ws/src/VINS-VINS-COVINS-adaptation/docker
+cd ~/catkin_ws/src/VINS-COVINS-adaptation/docker
 make build
 ```
 
