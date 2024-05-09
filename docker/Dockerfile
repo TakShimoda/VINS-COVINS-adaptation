@@ -1,7 +1,7 @@
 FROM ros:melodic-perception
 
 ENV CERES_VERSION="1.12.0"
-ENV CATKIN_WS=/root/catkin_ws
+ENV CATKIN_WS=/root/catkin_vins
 
       # set up thread number for building
 RUN   if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; \
@@ -25,7 +25,8 @@ RUN   if [ "x$(nproc)" = "x1" ] ; then export USE_PROC=1 ; \
       git checkout tags/${CERES_VERSION} && \
       mkdir build && cd build && \
       cmake .. && \
-      make -j$(USE_PROC) install && \
+      # make -j$(USE_PROC) install && \
+      make install && \
       rm -rf ../../ceres-solver && \
       mkdir -p $CATKIN_WS/src/VINS-Fusion/
 
@@ -50,6 +51,6 @@ RUN catkin config \
       --extend /opt/ros/$ROS_DISTRO \
       --cmake-args \
         -DCMAKE_BUILD_TYPE=Release && \
-    catkin build && \
+    catkin build -j4 && \
     sed -i '/exec "$@"/i \
             source "/root/catkin_ws/devel/setup.bash"' /ros_entrypoint.sh
